@@ -1,0 +1,7 @@
+# robosuite + robomimic + mimicgen are installed from source (see INSTALL.md).
+# This file lists the *additional* deps not pulled in transitively, plus mujoco
+# pinned to a version that works with robosuite v1.5.1's Sawyer/IIWA mesh defs.
+
+mujoco==3.2.7
+seaborn
+

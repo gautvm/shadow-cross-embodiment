@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# ML artifacts — exclude run outputs but keep the smoke confirmation images.
+# (git can't re-include files inside an excluded directory, so we exclude
+# specific subdirs instead of all of results/.)
+results/runs/
+results/calibration_sweep.jsonl
+results/cross_embodiment.jsonl
+results/fig_*.png
+checkpoints/
+runs/
+wandb/
+data/
+datasets/
+*.h5
+*.hdf5
+*.pt
+*.ckpt
+*.pth
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+# we keep scripts/*.ipynb (Kaggle launcher) in the repo
+
+# Local config
+.env
+.env.local
