@@ -45,6 +45,15 @@ def main():
     cfg["train"]["seed"] = args.seed
     cfg["train"]["cuda"] = not args.no_cuda
     cfg["experiment"]["name"] = f"{args.variant}_seed{args.seed}"
+
+    # Resolve the v1.5 composite controller config at runtime — its shape
+    # changed between robosuite versions, so we let robosuite produce it.
+    from robosuite.controllers import load_composite_controller_config
+    cfg["experiment"]["env_meta_update_dict"] = {
+        "env_kwargs": {
+            "controller_configs": load_composite_controller_config(controller="BASIC", robot="Panda"),
+        },
+    }
     if args.epochs is not None:
         cfg["train"]["num_epochs"] = args.epochs
         # Only shrink steps-per-epoch for tiny smoke runs; real runs keep paper-matched 100.
