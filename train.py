@@ -64,9 +64,13 @@ def main():
         print(f"wrote config to {args.config_out} (no training)")
         return
 
-    # Hand off to robomimic's training entrypoint
-    import robomimic.scripts.train as rmtrain
-    rmtrain.main(rmtrain.parse_args(["--config", str(resolved_cfg_path)]))
+    # Hand off to robomimic's training entrypoint as a subprocess
+    # (its parse_args isn't exposed as a function — it's inline under __main__).
+    import subprocess, sys
+    subprocess.run(
+        [sys.executable, "-m", "robomimic.scripts.train", "--config", str(resolved_cfg_path)],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
