@@ -121,9 +121,18 @@ class RobotMaskRenderer:
         eef = self.env.robots[0].robot_model.eef_name
         self._eef_body = eef["right"] if isinstance(eef, dict) else eef
 
-    def _seg(self) -> np.ndarray:
+    def _seg_and_image(self):
+        """Single observation refresh — returns (seg, rgb_image) so callers don't
+        re-render. The rgb_image here is what the seg corresponds to pixel-for-pixel."""
         obs = self.env._get_observations(force_update=True)
-        return np.asarray(obs[f"{self.camera_name}_segmentation_element"]).squeeze().astype(np.int32)
+        seg = np.asarray(obs[f"{self.camera_name}_segmentation_element"]).squeeze().astype(np.int32)
+        img = np.asarray(obs[f"{self.camera_name}_image"])
+        self._last_image = img
+        return seg, img
+
+    def _seg(self) -> np.ndarray:
+        seg, _ = self._seg_and_image()
+        return seg
 
     def _mask_from_seg(self, seg: np.ndarray) -> np.ndarray:
         return np.isin(seg, self.robot_geom_ids)
@@ -150,8 +159,8 @@ class RobotMaskRenderer:
         return self._mask_from_seg(self._seg())
 
     def get_image(self) -> np.ndarray:
-        obs = self.env._get_observations(force_update=True)
-        return np.asarray(obs[f"{self.camera_name}_image"])
+        # returns the image cached from the last _seg_and_image() / real_mask() / virt_mask() call.
+        return self._last_image
 
 
 def composite(base_image: np.ndarray, real_mask: np.ndarray, virt_mask: np.ndarray,

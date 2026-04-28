@@ -49,7 +49,14 @@ from lib.camera_noise import sample_extrinsic_noise
 
 def build_real_masks(src_path: Path, source_robot: str, height: int, width: int,
                      demo_keys: list[str]):
-    """Pass 1: source-robot pixel masks for every frame, plus the original RGB."""
+    """Pass 1: source-robot pixel masks AND the freshly-rendered RGB for each frame.
+
+    We use the freshly-rendered RGB as the composite base, not the dataset's stored
+    image. The dataset images come from a different robosuite version (1.4.1 vs our
+    1.5.1) and use a different vertical-axis convention than our offscreen renderer,
+    so masks computed on our render don't align with the stored pixels. Re-rendering
+    guarantees pixel-perfect mask alignment.
+    """
     renderer = RobotMaskRenderer(robot=source_robot, height=height, width=width)
     real_masks = {}
     base_imgs = {}
@@ -58,13 +65,17 @@ def build_real_masks(src_path: Path, source_robot: str, height: int, width: int,
             d = f["data"][k]
             T = d.attrs["num_samples"]
             rm = np.empty((T, height, width), dtype=bool)
-            base_imgs[k] = np.asarray(d["obs"]["agentview_image"][:])  # (T, H, W, 3)
+            imgs = np.empty((T, height, width, 3), dtype=np.uint8)
             for t in range(T):
                 state = np.asarray(d["states"][t])
                 arm = np.asarray(d["obs"]["robot0_joint_pos"][t])
                 gr = np.asarray(d["obs"]["robot0_gripper_qpos"][t])
-                rm[t] = renderer.real_mask(state, arm, gr)
+                # robosuite's offscreen render uses OpenGL y-flipped convention;
+                # the dataset stores images already flipped to top-down. Match.
+                rm[t] = renderer.real_mask(state, arm, gr)[::-1]
+                imgs[t] = renderer.get_image()[::-1]
             real_masks[k] = rm
+            base_imgs[k] = imgs
     del renderer
     return real_masks, base_imgs
 
@@ -98,7 +109,7 @@ def build_virt_masks(src_path: Path, target_robot: str, height: int, width: int,
                     Rnoisy = R.from_matrix(Tn[:3, :3]) * Rcur
                     qx, qy, qz, qw = Rnoisy.as_quat()
                     eef_q_wxyz = np.array([qw, qx, qy, qz])
-                vm[t] = renderer.virt_mask(eef_pos, eef_q_wxyz)
+                vm[t] = renderer.virt_mask(eef_pos, eef_q_wxyz)[::-1]
             virt_masks[k] = vm
     del renderer
     return virt_masks
