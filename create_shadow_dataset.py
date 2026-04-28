@@ -96,17 +96,17 @@ def build_virt_masks(src_path: Path, target_robot: str, height: int, width: int,
                 eef_pos = np.asarray(d["obs"]["robot0_eef_pos"][t])
                 eef_q_wxyz = quat_xyzw_to_wxyz(d["obs"]["robot0_eef_quat"][t])
                 if noise_sigma_xyz > 0 or noise_sigma_rot_deg > 0:
-                    # Perturb the EE target — equivalent to perturbing camera extrinsics
-                    # to first order: a misaligned camera makes the rendered mask end up
-                    # at the wrong place in the image, which is exactly what we want to
-                    # simulate. (Strictly the camera is what's noised; perturbing the EE
-                    # position is mathematically equivalent for the silhouette outcome.)
+                    # Approximate camera-extrinsic noise by perturbing the IK target:
+                    #   translation σxyz adds a small world-frame shift to the EE position;
+                    #   rotation σrot adds a small EE-LOCAL-frame rotation to the orientation
+                    #   (right-multiply, so the rotation is about the EE's own axes — not
+                    #   about the world origin, which would induce a lever-arm displacement
+                    #   far larger than the intended σxyz).
                     Tn = sample_extrinsic_noise(noise_sigma_xyz, noise_sigma_rot_deg, rng)
-                    eef_pos = Tn[:3, :3] @ eef_pos + Tn[:3, 3]
-                    # apply rotation noise to the quaternion
+                    eef_pos = eef_pos + Tn[:3, 3]
                     from scipy.spatial.transform import Rotation as R
                     Rcur = R.from_quat([eef_q_wxyz[1], eef_q_wxyz[2], eef_q_wxyz[3], eef_q_wxyz[0]])
-                    Rnoisy = R.from_matrix(Tn[:3, :3]) * Rcur
+                    Rnoisy = Rcur * R.from_matrix(Tn[:3, :3])
                     qx, qy, qz, qw = Rnoisy.as_quat()
                     eef_q_wxyz = np.array([qw, qx, qy, qz])
                 vm[t] = renderer.virt_mask(eef_pos, eef_q_wxyz)[::-1]
