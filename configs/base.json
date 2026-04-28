@@ -12,11 +12,11 @@
     "save": {
       "enabled": true,
       "every_n_seconds": null,
-      "every_n_epochs": 100,
+      "every_n_epochs": 50,
       "epochs": [],
       "on_best_validation": false,
       "on_best_rollout_return": false,
-      "on_best_rollout_success_rate": true
+      "on_best_rollout_success_rate": false
     },
     "epoch_every_n_steps": 100,
     "validation_epoch_every_n_steps": 10,
@@ -27,7 +27,7 @@
     "keep_all_videos": false,
     "video_skip": 5,
     "rollout": {
-      "enabled": true,
+      "enabled": false,
       "n": 25,
       "horizon": 200,
       "rate": 100,
