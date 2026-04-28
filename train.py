@@ -47,7 +47,9 @@ def main():
     cfg["experiment"]["name"] = f"{args.variant}_seed{args.seed}"
     if args.epochs is not None:
         cfg["train"]["num_epochs"] = args.epochs
-        cfg["experiment"]["epoch_every_n_steps"] = min(50, cfg["experiment"]["epoch_every_n_steps"])
+        # Only shrink steps-per-epoch for tiny smoke runs; real runs keep paper-matched 100.
+        if args.epochs <= 10:
+            cfg["experiment"]["epoch_every_n_steps"] = 50
     if args.batch_size is not None:
         cfg["train"]["batch_size"] = args.batch_size
 
