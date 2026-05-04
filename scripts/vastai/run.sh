@@ -83,18 +83,32 @@ else
   echo "[run] no prior checkpoint found; training from scratch"
 fi
 
-# 6. Background watcher: every 60s, find the latest last.pth and push to release
+# Where last.pth actually lands. robomimic's `output_dir` resolves
+# relative to the installed package, so models end up under
+# /workspace/robomimic/robomimic/results/runs/<exp>/<timestamp>/last.pth
+# rather than in our project's results/runs. Search both, newest wins.
+LAST_PTH_SEARCH=(/workspace/robomimic/robomimic/results/runs /workspace/shadow/results/runs)
+
+find_latest_last_pth() {
+  find "${LAST_PTH_SEARCH[@]}" -name 'last.pth' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr | head -1 | cut -d' ' -f2-
+}
+
+# 6. Background watcher: every 60s, push the newest last.pth to the release
 (
   cd /workspace/shadow
+  LAST_MTIME=0
   while true; do
     sleep 60
-    LAST=$(find results/runs -name 'last.pth' -newer /tmp/last_pushed 2>/dev/null | head -1 || true)
-    if [ -n "$LAST" ]; then
+    LAST=$(find_latest_last_pth)
+    [ -z "$LAST" ] && continue
+    MTIME=$(stat -c%Y "$LAST" 2>/dev/null || echo 0)
+    if [ "$MTIME" -gt "$LAST_MTIME" ]; then
       cp "$LAST" "checkpoints/${VARIANT}_seed${SEED}.pth"
       gh release upload "$RELEASE_TAG" "checkpoints/${VARIANT}_seed${SEED}.pth" \
         --clobber -R gautvm/shadow-cross-embodiment 2>&1 | tail -2 || true
-      touch /tmp/last_pushed
-      echo "[watcher] pushed checkpoint at $(date +%H:%M:%S)"
+      LAST_MTIME=$MTIME
+      echo "[watcher] pushed checkpoint at $(date +%H:%M:%S) ($LAST)"
     fi
   done
 ) &
@@ -106,7 +120,7 @@ cd /workspace/shadow
 python3 train.py --variant "$VARIANT" --seed "$SEED" --epochs "$EPOCHS" $RESUME_ARG
 
 # 8. Final push (in case watcher missed the last write)
-LAST=$(find results/runs -name 'last.pth' | head -1)
+LAST=$(find_latest_last_pth)
 if [ -n "$LAST" ]; then
   cp "$LAST" "checkpoints/${VARIANT}_seed${SEED}.pth"
   gh release upload "$RELEASE_TAG" "checkpoints/${VARIANT}_seed${SEED}.pth" \
