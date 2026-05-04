@@ -9,10 +9,16 @@ set -euo pipefail
 
 cd /workspace
 
-# pytorch:2.4.1-cuda12.1-cudnn9-runtime lacks python headers + gcc, which
-# evdev (transitive dep via robosuite/mimicgen) needs to compile its C ext.
-echo "[setup] installing build deps for native extensions"
-apt-get update -qq && apt-get install -y -qq python3-dev build-essential
+# pytorch:2.4.1-cuda12.1-cudnn9-runtime is missing two things we need:
+#   - python3-dev + build-essential: evdev (transitive dep) ships only an
+#     sdist and needs gcc + Python headers to build its C extension.
+#   - libxcb1 + libgl1 + friends: opencv-python (cv2, used by robosuite's
+#     OpenCVRenderer) loads libxcb.so.1 at import time even when used
+#     headlessly. Without these the very first `import robosuite` fails.
+echo "[setup] installing system deps for native extensions and cv2"
+apt-get update -qq && apt-get install -y -qq \
+  python3-dev build-essential \
+  libxcb1 libgl1 libsm6 libxext6 libglib2.0-0
 
 echo "[setup] cloning vendored repos"
 [ -d robosuite ] || git clone -q https://github.com/ARISE-Initiative/robosuite.git
