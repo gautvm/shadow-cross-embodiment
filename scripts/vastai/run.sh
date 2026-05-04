@@ -37,7 +37,10 @@ if ! command -v gh >/dev/null 2>&1; then
     > /etc/apt/sources.list.d/github-cli.list
   apt-get update -qq && apt-get install -y -qq gh
 fi
-echo "$GH_TOKEN" | gh auth login --with-token
+# gh CLI auto-uses GH_TOKEN env var. `gh auth login --with-token` errors
+# with "GH_TOKEN env var in use" when both are set, killing run.sh under
+# `set -e`. Skip the explicit login — env var is sufficient.
+gh auth status 2>&1 | head -3 || true
 
 # 2. Run install + patches if not done already
 [ -d robomimic ] || bash /workspace/shadow/scripts/vastai/setup.sh

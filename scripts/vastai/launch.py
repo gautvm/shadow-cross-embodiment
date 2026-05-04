@@ -16,8 +16,10 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -96,12 +98,24 @@ echo 'training started in tmux session: train'
     ])
     print(out.stdout)
 
-    # parse the new instance id out of the response
-    try:
-        result = json.loads(out.stdout.strip().splitlines()[-1])
+    # vastai prints e.g. "Started. {'success': True, 'new_contract': 36097922, ...}"
+    # — Python dict syntax with single quotes, not JSON. Pull the {...} substring
+    # out of the last non-empty line and parse with ast.literal_eval.
+    iid = None
+    for line in reversed(out.stdout.strip().splitlines()):
+        m = re.search(r"\{.*\}", line)
+        if not m:
+            continue
+        try:
+            result = ast.literal_eval(m.group(0))
+        except (ValueError, SyntaxError):
+            try:
+                result = json.loads(m.group(0))
+            except json.JSONDecodeError:
+                continue
         iid = result.get("new_contract") or result.get("id")
-    except (json.JSONDecodeError, IndexError):
-        iid = None
+        if iid:
+            break
 
     print()
     print("=" * 60)
