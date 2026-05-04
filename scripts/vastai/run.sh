@@ -94,12 +94,16 @@ find_latest_last_pth() {
     | sort -nr | head -1 | cut -d' ' -f2-
 }
 
-# 6. Background watcher: every 60s, push the newest last.pth to the release
+# 6. Background watcher: every 60 min, push the newest last.pth to the release.
+# Per-minute uploads of the 1.2GB diffusion-policy ckpt cost ~$2/hr in Vast
+# bandwidth — disastrous for an 8-hour run. Hourly uploads are sufficient
+# given that disk-resident numbered ckpts (model_epoch_X.pth) provide
+# finer-grained recovery.
 (
   cd /workspace/shadow
   LAST_MTIME=0
   while true; do
-    sleep 60
+    sleep 3600
     LAST=$(find_latest_last_pth)
     [ -z "$LAST" ] && continue
     MTIME=$(stat -c%Y "$LAST" 2>/dev/null || echo 0)
