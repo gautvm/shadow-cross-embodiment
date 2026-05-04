@@ -9,6 +9,11 @@ set -euo pipefail
 
 cd /workspace
 
+# pytorch:2.4.1-cuda12.1-cudnn9-runtime lacks python headers + gcc, which
+# evdev (transitive dep via robosuite/mimicgen) needs to compile its C ext.
+echo "[setup] installing build deps for native extensions"
+apt-get update -qq && apt-get install -y -qq python3-dev build-essential
+
 echo "[setup] cloning vendored repos"
 [ -d robosuite ] || git clone -q https://github.com/ARISE-Initiative/robosuite.git
 [ -d robomimic ] || git clone -q https://github.com/ARISE-Initiative/robomimic.git
