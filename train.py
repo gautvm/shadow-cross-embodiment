@@ -36,6 +36,8 @@ def main():
                    help="force CPU (Mac smoke run)")
     p.add_argument("--config_out", type=str, default=None,
                    help="if set, write the resolved config here and exit (no training)")
+    p.add_argument("--resume_from", type=str, default=None,
+                   help="path to last.pth to warm-start from (cloud restart after eviction)")
     args = p.parse_args()
 
     base_path = REPO / "configs" / "base.json"
@@ -54,6 +56,8 @@ def main():
             "controller_configs": load_composite_controller_config(controller="BASIC", robot="Panda"),
         },
     }
+    if args.resume_from is not None:
+        cfg["experiment"]["ckpt_path"] = args.resume_from
     if args.epochs is not None:
         cfg["train"]["num_epochs"] = args.epochs
         # Only shrink steps-per-epoch for tiny smoke runs; real runs keep paper-matched 100.
